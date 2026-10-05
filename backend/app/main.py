@@ -5,14 +5,32 @@
 """
 from __future__ import annotations
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app.services.green_asset import LedgerError, service
 from app.store import store
 
-app = FastAPI(title="光伏电站运维管理平台", version="1.0.0")
+log = logging.getLogger("green_asset")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """启动即把存量绿证按核发月份回填（幂等：已回填月份沿用原算法并跳过）。"""
+    try:
+        result = service.backfill()
+        log.info("绿证存量回填：%s", result["message"])
+    except LedgerError as exc:
+        log.warning("绿证存量回填未执行：%s", exc)
+    yield
+
+
+app = FastAPI(title="光伏电站运维管理平台", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
