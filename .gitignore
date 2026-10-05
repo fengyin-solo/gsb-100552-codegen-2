@@ -85,3 +85,6 @@ desktop.ini
 *.db
 *.pid
 *.seed
+
+# ===== 绿证碳资产台账运行态数据 =====
+backend/data/

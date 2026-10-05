@@ -13,6 +13,9 @@ class PageResult(BaseModel, Generic[T]):
     total: int
     page: int = 1
     size: int = 20
+    # 全量结果的口径指纹（指纹基于当前过滤条件下的全量行，与分页无关），
+    # 与对账文件里的口径指纹一致时，即证明列表、全量打包、分页打包同源。
+    caliber: str | None = None
 
 
 class ActionResult(BaseModel):
@@ -244,3 +247,52 @@ class ReportEntry(BaseModel):
     field_5: str | None = None  # 设备可利用率
     field_6: str | None = None  # 故障停机时间
     field_7: str | None = None  # 月报状态
+
+
+class RulePayload(BaseModel):
+    """核发规则版本登记。"""
+
+    规则版本: str
+    生效月份: str
+    绿证系数: float = 1.0
+    减排因子: float = 0.5703
+    核发口径说明: str | None = None
+
+
+class BackfillPayload(BaseModel):
+    """存量绿证按核发月份回填，整批一次写入。"""
+
+    items: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SettlementPayload(BaseModel):
+    """单笔交易结算登记（凭证号去重）。"""
+
+    凭证号: str
+    归属月份: str
+    交易日期: str | None = None
+    对手方: str | None = None
+    绿证交割量: float = 0
+    碳减排交割量: float = 0
+    结算金额: float = 0
+
+
+class SettlementItem(BaseModel):
+    """月末事务里的单笔结算明细。"""
+
+    凭证号: str
+    交易日期: str | None = None
+    对手方: str | None = None
+    绿证交割量: float = 0
+    碳减排交割量: float = 0
+    结算金额: float = 0
+
+
+class MonthEndPayload(BaseModel):
+    """月末核发与结算：一次事务里一起写入，不平整批失败。"""
+
+    月份: str
+    月报编号: str
+    发电量MWh: float
+    结算明细: list[SettlementItem] = Field(default_factory=list)
+    财务填报结余: float | None = None
